@@ -1,20 +1,25 @@
-from data import datasetloader, data_corr_cols, one_hot, data_drop
+from data import datasetloader, drop_set_id, Labelencoder,select_cols, scaling,data_split,minmax_scale
+from model import  model
+from Util import EDA, check, submission
 
-print(f"{'='*10} Data Loading... {'='*10}")
-#우주선 데이터 로드
-data = datasetloader()
-print(f"{'='*10} Success! {'='*10}")
-print(f"{'='*10} Columns Drop... {'='*10}")
-#쓰지 않을 컬럼 drop(PassengerId, Cabin,Name)
-data_drop = data_drop(data)
-#원 핫 인코딩으로 오브젝트형 변환
-print(f"{'='*10} One Hot Encoding... {'='*10}")
-data_one = one_hot(data_drop)
-print(data_one.info())
-print(data_one.head())
-#corr로 타겟과 상관관계 확인
-print(data_one.corr()['Transported'])
-#절댓값 상관관계 0.2 이상인 컬럼만 추출
-cols = data_corr_cols(data_one)
+class main():
+    print(f"{'='*10} Data Loading... {'='*10}")
+    #우주선 데이터 로드
+    df_train, df_test = datasetloader()
+    print(f"{'='*10} Success! {'='*10}")
+    print(f"{'='*10} Columns Drop... {'='*10}")
+    #쓰지 않을 컬럼 drop(PassengerId, Cabin,Name)
+    df_train_drop, df_test_drop, df_test_id = drop_set_id(df_train,df_test)
+    df_train_label, df_test_label = Labelencoder(df_train_drop, df_test_drop)
+    cols = select_cols(df_train_label)
+    df_train_label, df_test_label = scaling(df_train_label, df_test_label)
+    train_x, test_x, train_y, test_y = data_split(df_train_label)
+    train_x, test_x, df_test_scaled = minmax_scale(df_test_label, train_x, test_x)
+    model, settings = model()
+    model.fit(X_train=train_x, y_train=train_y, **settings)
+    print(f"최적의 모델: {model.best_estimator}")
+    check(model, test_x, test_y)
+    submission(model, df_test_scaled, df_test_id)
 
-
+if __name__ == "__main__":
+    main()
